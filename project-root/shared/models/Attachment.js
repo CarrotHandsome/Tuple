@@ -5,7 +5,7 @@ const attachmentSchema = new mongoose.Schema({
   url:         { type: String, required: true },
   uploaded_by: { type: mongoose.Schema.Types.ObjectId, ref: 'User',    required: true },
   group_id:    { type: mongoose.Schema.Types.ObjectId, ref: 'Group',   required: true },
-  message_id:  { type: mongoose.Schema.Types.ObjectId, ref: 'Message', required: true },
+  message_id:  { type: mongoose.Schema.Types.ObjectId, ref: 'Message', default: null },
   timestamp:   { type: Date, default: Date.now },
 }, { timestamps: true });
 

@@ -84,15 +84,6 @@ describe('Attachment Model', () => {
     })).rejects.toThrow();
   });
 
-  it('should require message_id', async () => {
-    await expect(Attachment.create({
-      type:        'image',
-      url:         '/uploads/test.png',
-      uploaded_by: userId,
-      group_id:    groupId,
-    })).rejects.toThrow();
-  });
-
   it('should only allow valid type values', async () => {
     await expect(Attachment.create({
       type:        'video',
