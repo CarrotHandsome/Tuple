@@ -1,10 +1,15 @@
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { useState } from 'react';
+import ProfileModal from './ProfileModal';
 
 const Navbar = () => {
   const { user, token, logout } = useAuth();
   const navigate = useNavigate();
+  const [showProfile, setShowProfile] = useState(false);
+  const [hoveringUsername, setHoveringUsername] = useState(false);
+  console.log('user object:', user);
 
   const handleLogout = async () => {
     try {
@@ -20,17 +25,57 @@ const Navbar = () => {
   };
 
   return (
-    <nav style={styles.nav}>
-      <span style={styles.logo} className="mono">TUPLE</span>
-      <div style={styles.right}>
-        <span style={styles.username} className="mono">{user?.username}</span>
-        <button style={styles.btn} onClick={handleLogout}>logout()</button>
-      </div>
-    </nav>
+    <>
+      <nav style={styles.nav}>
+        <span style={styles.logo} className="mono">TUPLE</span>
+        <div style={styles.right}>
+          <div
+            style={styles.usernameWrapper}
+            onMouseEnter={() => { setHoveringUsername(true); console.log('hovering'); }}
+            onMouseLeave={() => setHoveringUsername(false)}
+          >
+            <span style={styles.username} className="mono">{user?.username}</span>
+            {hoveringUsername && (user?.firstname || user?.lastname) && (
+              <div style={styles.tooltip}>
+                {[user.firstname, user.lastname].filter(Boolean).join(' ')}
+              </div>
+            )}
+          </div>
+          <button style={styles.btn} onClick={() => setShowProfile(true)}>profile()</button>
+          <button style={styles.btn} onClick={handleLogout}>logout()</button>
+        </div>
+      </nav>
+      {showProfile && (
+        <ProfileModal
+          token={token}
+          user={user}
+          onClose={() => setShowProfile(false)}
+        />
+      )}
+    </>
   );
 };
 
 const styles = {
+  usernameWrapper: {
+    position: 'relative',
+    cursor: 'default',
+  },
+  tooltip: {
+    position: 'absolute',
+    top: '100%',
+    left: '50%',
+    transform: 'translateX(-50%)',
+    marginTop: '8px',
+    background: 'var(--surface)',
+    border: '1px solid var(--border)',
+    borderRadius: '4px',
+    padding: '6px 12px',
+    fontSize: '12px',
+    color: 'var(--text)',
+    whiteSpace: 'nowrap',
+    zIndex: 10,
+  },
   nav: {
     background: 'var(--surface)',
     borderBottom: '1px solid var(--border)',

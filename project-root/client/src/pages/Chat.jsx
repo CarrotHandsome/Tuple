@@ -43,7 +43,9 @@ const Chat = () => {
         setGroupName(groupRes.data.group.group_name);
         setMessages(messagesRes.data.messages.map(m => ({
   ...m,
-  username: m.sender_id?.username || m.sender_id,
+  username:  m.sender_id?.username || m.sender_id,
+  firstname: m.sender_id?.firstname,
+  lastname:  m.sender_id?.lastname,
   sender_id: m.sender_id?._id || m.sender_id,
 })));
       } catch {

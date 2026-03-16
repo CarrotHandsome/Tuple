@@ -1,14 +1,30 @@
+import { useState } from 'react';
+
+
 const Message = ({ message, isOwn }) => {
   const time = new Date(message.timestamp).toLocaleTimeString([], {
     hour: '2-digit',
     minute: '2-digit',
   });
 
+  const [hovering, setHovering] = useState(false);
+
   return (
     <div style={{ ...styles.wrapper, justifyContent: isOwn ? 'flex-end' : 'flex-start' }}>
       <div style={{ ...styles.bubble, ...(isOwn ? styles.own : styles.other) }}>
         {!isOwn && (
-          <span style={styles.username} className="mono">{message.username || message.sender_id}</span>
+          <div
+            style={styles.usernameWrapper}
+            onMouseEnter={() => setHovering(true)}
+            onMouseLeave={() => setHovering(false)}
+          >
+            <span style={styles.username} className="mono">{message.username || message.sender_id}</span>
+            {hovering && message.firstname && (
+              <div style={styles.tooltip}>
+                {[message.firstname, message.lastname].filter(Boolean).join(' ')}
+              </div>
+            )}
+          </div>
         )}
         <p style={styles.content}>{message.content}</p>
         <span style={styles.time} className="mono">{time}</span>
@@ -18,6 +34,25 @@ const Message = ({ message, isOwn }) => {
 };
 
 const styles = {
+  usernameWrapper: {
+    position: 'relative',
+    cursor: 'default',
+    display: 'inline-block',
+  },
+  tooltip: {
+    position: 'absolute',
+    bottom: '100%',
+    left: '0',
+    marginBottom: '4px',
+    background: 'var(--bg)',
+    border: '1px solid var(--border)',
+    borderRadius: '4px',
+    padding: '4px 10px',
+    fontSize: '11px',
+    color: 'var(--text)',
+    whiteSpace: 'nowrap',
+    zIndex: 10,
+  },
   wrapper: {
     display: 'flex',
     marginBottom: '12px',

@@ -69,7 +69,7 @@ const getMessages = async (req, res) => {
 
     const messages = await Message.find({ group_id: groupId })
   .sort({ timestamp: 1 })
-  .populate('sender_id', 'username');
+  .populate('sender_id', 'username firstname lastname');
   
     return res.status(200).json({ messages });
   } catch (err) {
