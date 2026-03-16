@@ -7,7 +7,10 @@ const {
   getGroups,
   getGroupById,
   leaveGroup,
-  deleteGroup
+  deleteGroup,
+  updateGroup,
+  inviteUser,
+  respondToInvite,
 } = require('../controllers/groups.controller');
 
 // All routes require authentication
@@ -19,5 +22,9 @@ router.get('/', getGroups);
 router.get('/:id', getGroupById);
 router.delete('/:id/leave', leaveGroup);
 router.delete('/:id', deleteGroup);
+router.post('/:id/invite', inviteUser);
+router.post('/:id/invite/respond', respondToInvite);
+router.patch('/:id', updateGroup);
+//router.delete('/:id/members/:userId', banUser);
 
 module.exports = router;

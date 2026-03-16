@@ -53,6 +53,12 @@ io.use(async (socket, next) => {
 io.on('connection', async (socket) => {
   console.log(`User connected: ${socket.user.username}`);
 
+  //SEND INVITE
+  socket.on('invite:sent', (data) => {
+    console.log('invite:sent received in gateway:', data);
+    console.log('invite:sent received, broadcasting to', io.engine.clientsCount, 'clients');
+    io.emit('invite:sent', data);
+  });
 
   // Mark user online
   await User.findByIdAndUpdate(socket.user._id, { status: 'online' });

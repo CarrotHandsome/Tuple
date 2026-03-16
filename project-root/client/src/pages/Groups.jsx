@@ -38,6 +38,14 @@ const Groups = () => {
   const socket = io('http://localhost:4000', { auth: { token } });
   socketRef.current = socket;
 
+  socket.onAny((event, ...args) => {
+  console.log('Groups socket received event:', event, args);
+});
+
+socket.on('disconnect', () => {
+  console.log('Groups socket disconnected');
+});
+
   socket.on('connect', () => {
     console.log('Groups socket connected:', socket.id);
   });
@@ -45,6 +53,13 @@ const Groups = () => {
   socket.on('room:deleted', ({ groupId }) => {
     setGroups(prev => prev.filter(g => g._id !== groupId));
   });
+
+  socket.on('invite:sent', ({ groupId, username: invitedUsername }) => {
+  console.log('invite:sent received:', invitedUsername, 'current user:', user.username);
+  if (invitedUsername === user.username) {
+    fetchGroups();
+  }
+});
 
   socket.on('room:created', (group) => {
     setGroups(prev => {
@@ -58,6 +73,40 @@ const Groups = () => {
 
   const isMember = (group) =>
     group.members.some(m => m.user_id === user._id || m.user_id?.toString() === user._id);
+
+  const getInviteStatus = (group) => {
+    const invite = group.invites?.find(
+      i => i.user_id === user._id || i.user_id?.toString() === user._id
+    );
+    return invite ? invite.status : null;
+  };
+
+  const handleRespondToInvite = async (group, accept) => {
+    try {
+      await axios.post(
+        `http://localhost:3000/groups/${group._id}/invite/respond`,
+        { accept },
+        { headers }
+      );
+      setGroups(prev => prev.map(g => {
+        if (g._id !== group._id) return g;
+        return {
+          ...g,
+          invites: accept
+            ? g.invites.map(i =>
+                i.user_id === user._id || i.user_id?.toString() === user._id
+                  ? { ...i, status: 'accepted' }
+                  : i
+              )
+            : g.invites.filter(
+                i => i.user_id !== user._id && i.user_id?.toString() !== user._id
+              ),
+        };
+      }));
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to respond to invite.');
+    }
+  };
 
   const handleJoinOrOpen = async (group) => {
     if (!isMember(group)) {
@@ -120,12 +169,45 @@ const Groups = () => {
                     </button>
                   ) : null}
                 </div>
-                <button
-                  style={isMember(group) ? styles.openBtn : styles.joinBtn}
-                  onClick={() => handleJoinOrOpen(group)}
-                >
-                  {isMember(group) ? 'open()' : 'join()'}
-                </button>
+                {(() => {
+                  if (isMember(group)) {
+                    return (
+                      <button style={styles.openBtn} onClick={() => handleJoinOrOpen(group)}>
+                        open()
+                      </button>
+                    );
+                  }
+                  if (group.is_private) {
+                    const inviteStatus = getInviteStatus(group);
+                    if (inviteStatus === 'accepted') {
+                      return (
+                        <button style={styles.joinBtn} onClick={() => handleJoinOrOpen(group)}>
+                          join()
+                        </button>
+                      );
+                    }
+                    if (inviteStatus === 'pending') {
+                      return (
+                        <div style={styles.inviteActions}>
+                          <button style={styles.acceptBtn} onClick={() => handleRespondToInvite(group, true)}>
+                            accept()
+                          </button>
+                          <button style={styles.declineBtn} onClick={() => handleRespondToInvite(group, false)}>
+                            decline()
+                          </button>
+                        </div>
+                      );
+                    }
+                    return (
+                      <div style={styles.lockIndicator} className="mono">🔒 private</div>
+                    );
+                  }
+                  return (
+                    <button style={styles.joinBtn} onClick={() => handleJoinOrOpen(group)}>
+                      join()
+                    </button>
+                  );
+                })()}
               </div>
             ))}
           </div>
@@ -133,11 +215,13 @@ const Groups = () => {
       </div>
 
       {showModal && (
-        <CreateGroupModal
-          token={token}
-          onCreated={handleGroupCreated}
-          onClose={() => setShowModal(false)}
-        />
+       <CreateGroupModal
+        token={token}
+        socketRef={socketRef}
+        onCreated={handleGroupCreated}
+        onClose={() => setShowModal(false)}
+      />
+
       )}
     </div>
   );
@@ -219,6 +303,32 @@ const styles = {
   dim: {
     color: 'var(--text-dim)',
     fontSize: '14px',
+  },
+
+  inviteActions: {
+    display: 'flex',
+    gap: '8px',
+  },
+  acceptBtn: {
+    flex: 1,
+    background: 'var(--accent)',
+    color: '#0f0f0f',
+    padding: '8px',
+    fontSize: '12px',
+    fontWeight: '600',
+  },
+  declineBtn: {
+    flex: 1,
+    background: 'transparent',
+    border: '1px solid var(--error)',
+    color: 'var(--error)',
+    padding: '8px',
+    fontSize: '12px',
+  },
+  lockIndicator: {
+    fontSize: '12px',
+    color: 'var(--text-dim)',
+    padding: '8px 0',
   },
 };
 

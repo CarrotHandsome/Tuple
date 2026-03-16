@@ -19,10 +19,6 @@ const sendMessage = async (req, res) => {
       return res.status(400).json({ error: 'Invalid group_id.' });
     }
 
-    if ((!content || content.trim() === '') && (!attachments || attachments.length === 0)) {
-      return res.status(400).json({ error: 'Message must have content or an attachment.' });
-    }
-
     const group = await Group.findById(group_id);
     if (!group) {
       return res.status(404).json({ error: 'Group not found.' });

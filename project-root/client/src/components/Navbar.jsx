@@ -12,17 +12,24 @@ const Navbar = () => {
   console.log('user object:', user);
 
   const handleLogout = async () => {
-    try {
-      await axios.post('http://localhost:3000/auth/logout', {}, {
+  try {
+    const match = window.location.pathname.match(/\/groups\/([^/]+)\/chat/);
+    if (match) {
+      const groupId = match[1];
+      await axios.delete(`http://localhost:3000/groups/${groupId}/leave`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-    } catch {
-      // Proceed with logout even if request fails
-    } finally {
-      logout();
-      navigate('/login');
     }
-  };
+    await axios.post('http://localhost:3000/auth/logout', {}, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  } catch {
+    // Proceed with logout even if requests fail
+  } finally {
+    logout();
+    navigate('/login');
+  }
+};
 
   return (
     <>

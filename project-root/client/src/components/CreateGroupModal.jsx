@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import axios from 'axios';
-import { io } from 'socket.io-client';
 
-const CreateGroupModal = ({ token, onCreated, onClose }) => {
+const CreateGroupModal = ({ token, socketRef, onCreated, onClose }) => {
   const [name, setName]       = useState('');
+  const [isPrivate, setIsPrivate] = useState(false);
   const [error, setError]     = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -14,20 +14,13 @@ const CreateGroupModal = ({ token, onCreated, onClose }) => {
   try {
     const res = await axios.post(
       'http://localhost:3000/groups',
-      { group_name: name.trim() },
+      { group_name: name.trim(), is_private: isPrivate },
       { headers: { Authorization: `Bearer ${token}` } }
     );
     const newGroup = res.data.group;
-    const socket = io('http://localhost:4000', { auth: { token } });
+    socketRef.current?.emit('room:created', newGroup);
+      onCreated(newGroup);
 
-    socket.on('connect', () => {
-      console.log('socket connected in modal:', socket.id);
-      socket.emit('room:created', newGroup);
-      setTimeout(() => {
-        socket.disconnect();
-        onCreated(newGroup);
-      }, 200);
-    });
   } catch (err) {
     setError(err.response?.data?.error || 'Failed to create room.');
     setLoading(false);
@@ -53,6 +46,25 @@ const CreateGroupModal = ({ token, onCreated, onClose }) => {
               autoFocus
               required
             />
+          </div>
+          <div style={styles.field}>
+            <label style={styles.label}>room type</label>
+            <div style={styles.toggle}>
+              <button
+                type="button"
+                style={{ ...styles.toggleBtn, ...(isPrivate ? {} : styles.toggleActive) }}
+                onClick={() => setIsPrivate(false)}
+              >
+                public
+              </button>
+              <button
+                type="button"
+                style={{ ...styles.toggleBtn, ...(isPrivate ? styles.toggleActive : {}) }}
+                onClick={() => setIsPrivate(true)}
+              >
+                private
+              </button>
+            </div>
           </div>
 
           {error && <p className="error-msg">{error}</p>}
@@ -138,6 +150,23 @@ const styles = {
     padding: '8px 16px',
     fontSize: '12px',
     fontWeight: '600',
+  },
+  toggle: {
+  display: 'flex',
+  gap: '8px',
+  },
+  toggleBtn: {
+    background: 'transparent',
+    border: '1px solid var(--border)',
+    color: 'var(--text-dim)',
+    padding: '6px 16px',
+    fontSize: '12px',
+    borderRadius: '4px',
+  },
+  toggleActive: {
+    background: 'var(--accent)',
+    color: '#0f0f0f',
+    border: '1px solid var(--accent)',
   },
 };
 

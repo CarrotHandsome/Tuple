@@ -5,6 +5,7 @@ import { io } from 'socket.io-client';
 import { useAuth } from '../context/AuthContext';
 import Navbar from '../components/Navbar';
 import Message from '../components/Message';
+import InviteBar from '../components/InviteBar';
 
 const SOCKET_URL = 'http://localhost:4000';
 const API_URL    = 'http://localhost:3000';
@@ -17,6 +18,7 @@ const Chat = () => {
   const [messages, setMessages]   = useState([]);
   const [content, setContent]     = useState('');
   const [groupName, setGroupName] = useState('');
+  const [group, setGroup] = useState(null);
   const [typing, setTyping]       = useState([]);
   const [error, setError]         = useState('');
 
@@ -41,6 +43,7 @@ const Chat = () => {
           axios.get(`${API_URL}/messages/${groupId}`, { headers }),
         ]);
         setGroupName(groupRes.data.group.group_name);
+        setGroup(groupRes.data.group);
         setMessages(messagesRes.data.messages.map(m => ({
   ...m,
   username:  m.sender_id?.username || m.sender_id,
@@ -151,6 +154,9 @@ const Chat = () => {
           </button>
           <span style={styles.roomName} className="mono"># {groupName}</span>
         </div>
+        {group?.is_private && (group?.owner_id === user._id || group?.owner_id?.toString() === user._id) ? (
+            <InviteBar groupId={groupId} token={token} socketRef={socketRef} />
+          ) : null}
 
         {error && <p className="error-msg" style={{ padding: '12px 24px' }}>{error}</p>}
 
