@@ -61,29 +61,6 @@ describe('Message Model', () => {
     expect(message.content).toBe('');
   });
 
-  it('should store read_by as an array of user references', async () => {
-    const message = await Message.create({
-      group_id:  groupId,
-      sender_id: userId,
-      content:   'Read receipt test',
-      read_by:   [userId],
-    });
-    expect(message.read_by).toHaveLength(1);
-    expect(message.read_by[0].toString()).toBe(userId.toString());
-  });
-
-  it('should store attachments as an array of references', async () => {
-    const fakeAttachmentId = new mongoose.Types.ObjectId();
-    const message = await Message.create({
-      group_id:    groupId,
-      sender_id:   userId,
-      content:     'Has attachment',
-      attachments: [fakeAttachmentId],
-    });
-    expect(message.attachments).toHaveLength(1);
-    expect(message.attachments[0].toString()).toBe(fakeAttachmentId.toString());
-  });
-
   it('should set a default timestamp', async () => {
     const message = await Message.create({
       group_id:  groupId,

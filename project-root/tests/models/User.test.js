@@ -2,8 +2,8 @@ const User = require('../../shared/models/User');
 const { connect, disconnect, clearDatabase } = require('../testSetup');
 
 describe('User Model', () => {
-  beforeAll(async () => await connect());
-  afterAll(async () => await disconnect());
+  beforeAll(async () => await connect(), 30000);
+  afterAll(async () => await disconnect(), 30000);
   afterEach(async () => await clearDatabase());
 
   it('should create a valid user successfully', async () => {
@@ -11,7 +11,6 @@ describe('User Model', () => {
       username: 'alice',
       email: 'alice@example.com',
       password_hash: 'hashed_password',
-      profile_info: { display_name: 'Alice', bio: 'Hello!' },
       status: 'online',
     });
 
@@ -19,7 +18,28 @@ describe('User Model', () => {
     expect(user.username).toBe('alice');
     expect(user.email).toBe('alice@example.com');
     expect(user.status).toBe('online');
-    expect(user.profile_info.display_name).toBe('Alice');
+  });
+
+  it('should save firstname and lastname when provided', async () => {
+    const user = await User.create({
+      username: 'alice',
+      email: 'alice@example.com',
+      password_hash: 'hashed_password',
+      firstname: 'Alice',
+      lastname: 'Smith',
+    });
+    expect(user.firstname).toBe('Alice');
+    expect(user.lastname).toBe('Smith');
+  });
+
+  it('should allow creation without firstname and lastname', async () => {
+    const user = await User.create({
+      username: 'alice',
+      email: 'alice@example.com',
+      password_hash: 'hashed_password',
+    });
+    expect(user.firstname).toBeUndefined();
+    expect(user.lastname).toBeUndefined();
   });
 
   it('should default status to offline', async () => {

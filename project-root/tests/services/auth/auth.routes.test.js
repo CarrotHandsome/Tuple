@@ -22,6 +22,24 @@ describe('Auth Routes', () => {
       expect(res.body.user._id).toBeDefined();
     });
 
+    it('should save firstname and lastname when provided', async () => {
+      await request(app)
+        .post('/auth/register')
+        .send({ username: 'alice', email: 'alice@example.com', password: 'password123', firstname: 'Alice', lastname: 'Smith' });
+
+      const user = await User.findOne({ username: 'alice' });
+      expect(user.firstname).toBe('Alice');
+      expect(user.lastname).toBe('Smith');
+    });
+
+    it('should register successfully without firstname and lastname', async () => {
+      const res = await request(app)
+        .post('/auth/register')
+        .send({ username: 'alice', email: 'alice@example.com', password: 'password123' });
+
+      expect(res.status).toBe(201);
+    });
+
     it('should not return password_hash in response', async () => {
       const res = await request(app)
         .post('/auth/register')
@@ -85,7 +103,7 @@ describe('Auth Routes', () => {
 
       const user = await User.findOne({ username: 'alice' });
       expect(user.password_hash).not.toBe('password123');
-      expect(user.password_hash).toMatch(/^\$2b\$/); // bcrypt hash prefix
+      expect(user.password_hash).toMatch(/^\$2b\$/);
     });
   });
 
@@ -235,6 +253,73 @@ describe('Auth Routes', () => {
       const user = await User.findOne({ email: 'alice@example.com' });
       const token2Exists = user.auth_tokens.some(t => t.token === token2);
       expect(token2Exists).toBe(true);
+    });
+  });
+
+  // --- UPDATE PROFILE ---
+  describe('PUT /auth/profile', () => {
+    let token;
+
+    beforeEach(async () => {
+      await request(app)
+        .post('/auth/register')
+        .send({ username: 'alice', email: 'alice@example.com', password: 'password123' });
+
+      const res = await request(app)
+        .post('/auth/login')
+        .send({ email: 'alice@example.com', password: 'password123' });
+
+      token = res.body.token;
+    });
+
+    it('should update firstname successfully', async () => {
+      const res = await request(app)
+        .put('/auth/profile')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ firstname: 'Alice' });
+
+      expect(res.status).toBe(200);
+      const user = await User.findOne({ email: 'alice@example.com' });
+      expect(user.firstname).toBe('Alice');
+    });
+
+    it('should update lastname successfully', async () => {
+      const res = await request(app)
+        .put('/auth/profile')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ lastname: 'Smith' });
+
+      expect(res.status).toBe(200);
+      const user = await User.findOne({ email: 'alice@example.com' });
+      expect(user.lastname).toBe('Smith');
+    });
+
+    it('should update both firstname and lastname together', async () => {
+      await request(app)
+        .put('/auth/profile')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ firstname: 'Alice', lastname: 'Smith' });
+
+      const user = await User.findOne({ email: 'alice@example.com' });
+      expect(user.firstname).toBe('Alice');
+      expect(user.lastname).toBe('Smith');
+    });
+
+    it('should return 400 if neither firstname nor lastname is provided', async () => {
+      const res = await request(app)
+        .put('/auth/profile')
+        .set('Authorization', `Bearer ${token}`)
+        .send({});
+
+      expect(res.status).toBe(400);
+    });
+
+    it('should return 401 if no token is provided', async () => {
+      const res = await request(app)
+        .put('/auth/profile')
+        .send({ firstname: 'Alice' });
+
+      expect(res.status).toBe(401);
     });
   });
 });

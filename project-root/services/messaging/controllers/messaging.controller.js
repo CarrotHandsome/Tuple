@@ -36,8 +36,6 @@ const sendMessage = async (req, res) => {
       group_id,
       sender_id: req.user._id,
       content:   content ? content.trim() : '',
-      read_by:   [req.user._id],
-      attachments: attachments || [],
     });
 
     // Update group's last_message_at so groups list stays sorted
@@ -70,8 +68,9 @@ const getMessages = async (req, res) => {
     }
 
     const messages = await Message.find({ group_id: groupId })
-      .sort({ timestamp: 1 });
-
+  .sort({ timestamp: 1 })
+  .populate('sender_id', 'username');
+  
     return res.status(200).json({ messages });
   } catch (err) {
     console.error('getMessages error:', err);
@@ -79,40 +78,4 @@ const getMessages = async (req, res) => {
   }
 };
 
-// PUT /messages/:groupId/read
-const markAsRead = async (req, res) => {
-  try {
-    const { groupId } = req.params;
-
-    if (!mongoose.Types.ObjectId.isValid(groupId)) {
-      return res.status(400).json({ error: 'Invalid group ID.' });
-    }
-
-    const group = await Group.findById(groupId);
-    if (!group) {
-      return res.status(404).json({ error: 'Group not found.' });
-    }
-
-    if (!isMember(group, req.user._id)) {
-      return res.status(403).json({ error: 'You are not a member of this group.' });
-    }
-
-    // Add user to read_by on all messages in the group where they aren't already listed
-    await Message.updateMany(
-      {
-        group_id: groupId,
-        read_by: { $ne: req.user._id },
-      },
-      {
-        $push: { read_by: req.user._id },
-      }
-    );
-
-    return res.status(200).json({ message: 'Messages marked as read.' });
-  } catch (err) {
-    console.error('markAsRead error:', err);
-    return res.status(500).json({ error: 'Internal server error.' });
-  }
-};
-
-module.exports = { sendMessage, getMessages, markAsRead };
+module.exports = { sendMessage, getMessages };

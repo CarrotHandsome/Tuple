@@ -3,21 +3,21 @@ const router = express.Router();
 const authMiddleware = require('../../auth/middleware/auth.middleware');
 const {
   createGroup,
-  getUserGroups,
+  joinGroup,
+  getGroups,
   getGroupById,
-  inviteUser,
-  respondToInvite,
   leaveGroup,
+  deleteGroup
 } = require('../controllers/groups.controller');
 
 // All routes require authentication
 router.use(authMiddleware);
 
 router.post('/', createGroup);
-router.get('/', getUserGroups);
+router.post('/:id/join', joinGroup);
+router.get('/', getGroups);
 router.get('/:id', getGroupById);
-router.post('/:id/invite', inviteUser);
-router.post('/:id/invite/respond', respondToInvite);
 router.delete('/:id/leave', leaveGroup);
+router.delete('/:id', deleteGroup);
 
 module.exports = router;

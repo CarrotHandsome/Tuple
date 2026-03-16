@@ -4,8 +4,8 @@ const User  = require('../../shared/models/User');
 const { connect, disconnect, clearDatabase } = require('../testSetup');
 
 describe('Group Model', () => {
-  beforeAll(async () => await connect());
-  afterAll(async () => await disconnect());
+  beforeAll(async () => await connect(), 30000);
+  afterAll(async () => await disconnect(), 30000);
   afterEach(async () => await clearDatabase());
 
   let userId;
@@ -23,14 +23,13 @@ describe('Group Model', () => {
     const group = await Group.create({
       group_name: 'Test Group',
       owner_id: userId,
-      members: [{ user_id: userId, role: 'owner' }],
+      members: [{ user_id: userId }],
     });
 
     expect(group._id).toBeDefined();
     expect(group.group_name).toBe('Test Group');
     expect(group.owner_id.toString()).toBe(userId.toString());
     expect(group.members).toHaveLength(1);
-    expect(group.members[0].role).toBe('owner');
   });
 
   it('should require group_name', async () => {
@@ -45,30 +44,13 @@ describe('Group Model', () => {
     })).rejects.toThrow();
   });
 
-  it('should default member role to member', async () => {
+  it('should store member user_id correctly', async () => {
     const group = await Group.create({
-      group_name: 'Role Test Group',
+      group_name: 'Member Test Group',
       owner_id: userId,
       members: [{ user_id: userId }],
     });
-    expect(group.members[0].role).toBe('member');
-  });
-
-  it('should only allow valid member roles', async () => {
-    await expect(Group.create({
-      group_name: 'Bad Role Group',
-      owner_id: userId,
-      members: [{ user_id: userId, role: 'superadmin' }],
-    })).rejects.toThrow();
-  });
-
-  it('should store group metadata', async () => {
-    const group = await Group.create({
-      group_name: 'Meta Group',
-      owner_id: userId,
-      metadata: { description: 'A test description' },
-    });
-    expect(group.metadata.description).toBe('A test description');
+    expect(group.members[0].user_id.toString()).toBe(userId.toString());
   });
 
   it('should set last_message_at by default', async () => {

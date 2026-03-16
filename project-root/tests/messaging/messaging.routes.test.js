@@ -69,17 +69,7 @@ describe('Messaging Routes', () => {
       expect(res.body.message.group_id.toString()).toBe(group._id.toString());
     });
 
-    it('should automatically add sender to read_by', async () => {
-      const { user, token } = await createUserAndToken('alice', 'alice@example.com');
-      const group = await createGroup(user._id);
-
-      const res = await request(app)
-        .post('/messages')
-        .set('Authorization', `Bearer ${token}`)
-        .send({ group_id: group._id.toString(), content: 'Hello!' });
-
-      expect(res.body.message.read_by).toContain(user._id.toString());
-    });
+    
 
     it('should update last_message_at on the group', async () => {
       const { user, token } = await createUserAndToken('alice', 'alice@example.com');
@@ -218,62 +208,6 @@ describe('Messaging Routes', () => {
         .set('Authorization', `Bearer ${token}`);
 
       expect(res.status).toBe(404);
-    });
-  });
-
-  // --- MARK AS READ ---
-  describe('PUT /messages/:groupId/read', () => {
-    it('should add user to read_by on unread messages', async () => {
-      const { user: alice } = await createUserAndToken('alice', 'alice@example.com');
-      const { user: bob, token: bobToken } = await createUserAndToken('bob', 'bob@example.com');
-      const group = await createGroup(alice._id, [bob._id]);
-
-      await Message.create({ group_id: group._id, sender_id: alice._id, content: 'Hey Bob!', read_by: [alice._id] });
-
-      await request(app)
-        .put(`/messages/${group._id}/read`)
-        .set('Authorization', `Bearer ${bobToken}`);
-
-      const messages = await Message.find({ group_id: group._id });
-      expect(messages[0].read_by.map(id => id.toString())).toContain(bob._id.toString());
-    });
-
-    it('should not duplicate user in read_by if already there', async () => {
-      const { user, token } = await createUserAndToken('alice', 'alice@example.com');
-      const group = await createGroup(user._id);
-
-      await Message.create({ group_id: group._id, sender_id: user._id, content: 'Hello!', read_by: [user._id] });
-
-      await request(app)
-        .put(`/messages/${group._id}/read`)
-        .set('Authorization', `Bearer ${token}`);
-
-      const messages = await Message.find({ group_id: group._id });
-      const readByStrings = messages[0].read_by.map(id => id.toString());
-      const count = readByStrings.filter(id => id === user._id.toString()).length;
-      expect(count).toBe(1);
-    });
-
-    it('should return 403 if user is not a member', async () => {
-      const { user: alice } = await createUserAndToken('alice', 'alice@example.com');
-      const { token: bobToken } = await createUserAndToken('bob', 'bob@example.com');
-      const group = await createGroup(alice._id);
-
-      const res = await request(app)
-        .put(`/messages/${group._id}/read`)
-        .set('Authorization', `Bearer ${bobToken}`);
-
-      expect(res.status).toBe(403);
-    });
-
-    it('should return 400 for an invalid group ID', async () => {
-      const { token } = await createUserAndToken('alice', 'alice@example.com');
-
-      const res = await request(app)
-        .put('/messages/notanid/read')
-        .set('Authorization', `Bearer ${token}`);
-
-      expect(res.status).toBe(400);
     });
   });
 });

@@ -8,7 +8,7 @@ const SALT_ROUNDS = 10;
 // POST /auth/register
 const register = async (req, res) => {
   try {
-    const { username, email, password } = req.body;
+    const { username, email, password, firstname, lastname } = req.body;
 
     if (!username || !email || !password) {
       return res.status(400).json({ error: 'Username, email and password are required.' });
@@ -25,6 +25,8 @@ const register = async (req, res) => {
       username,
       email,
       password_hash,
+      firstname, 
+      lastname
     });
 
     return res.status(201).json({
@@ -103,4 +105,25 @@ const logout = async (req, res) => {
   }
 };
 
-module.exports = { register, login, logout };
+const updateProfile = async (req, res) => {
+  try {
+    const { firstname, lastname } = req.body;
+
+    if (firstname === undefined && lastname === undefined) {
+      return res.status(400).json({ error: 'At least one of firstname or lastname is required.' });
+    }
+
+    const updates = {};
+    if (firstname !== undefined) updates.firstname = firstname;
+    if (lastname !== undefined)  updates.lastname  = lastname;
+
+    await User.findByIdAndUpdate(req.user._id, updates);
+
+    return res.status(200).json({ message: 'Profile updated successfully.' });
+  } catch (err) {
+    console.error('updateProfile error:', err);
+    return res.status(500).json({ error: 'Internal server error.' });
+  }
+};
+
+module.exports = { register, login, logout, updateProfile };

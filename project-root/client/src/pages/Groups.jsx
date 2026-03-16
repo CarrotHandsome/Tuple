@@ -1,0 +1,225 @@
+import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import { useAuth } from '../context/AuthContext';
+import Navbar from '../components/Navbar';
+import CreateGroupModal from '../components/CreateGroupModal';
+import { io } from 'socket.io-client';
+
+const Groups = () => {
+  const { user, token } = useAuth();
+  const navigate = useNavigate();
+
+  const [groups, setGroups]       = useState([]);
+  const [loading, setLoading]     = useState(true);
+  const [error, setError]         = useState('');
+  const [showModal, setShowModal] = useState(false);
+
+  const socketRef = useRef(null);
+
+  const headers = { Authorization: `Bearer ${token}` };
+
+  const fetchGroups = async () => {
+    try {
+      const res = await axios.get('http://localhost:3000/groups', { headers });
+      setGroups(res.data.groups);
+    } catch {
+      setError('Failed to load rooms.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchGroups();
+  }, []);
+
+ useEffect(() => {
+  const socket = io('http://localhost:4000', { auth: { token } });
+  socketRef.current = socket;
+
+  socket.on('connect', () => {
+    console.log('Groups socket connected:', socket.id);
+  });
+
+  socket.on('room:deleted', ({ groupId }) => {
+    setGroups(prev => prev.filter(g => g._id !== groupId));
+  });
+
+  socket.on('room:created', (group) => {
+    setGroups(prev => {
+      if (prev.some(g => g._id === group._id)) return prev;
+      return [group, ...prev];
+    });
+  });
+
+  return () => socket.disconnect();
+}, [token]);
+
+  const isMember = (group) =>
+    group.members.some(m => m.user_id === user._id || m.user_id?.toString() === user._id);
+
+  const handleJoinOrOpen = async (group) => {
+    if (!isMember(group)) {
+      try {
+        await axios.post(`http://localhost:3000/groups/${group._id}/join`, {}, { headers });
+      } catch (err) {
+        setError(err.response?.data?.error || 'Failed to join room.');
+        return;
+      }
+    }
+    navigate(`/groups/${group._id}/chat`);
+  };
+
+  const handleGroupCreated = (newGroup) => {
+  socketRef.current?.emit('room:created', newGroup);
+  setGroups(prev => [newGroup, ...prev]);
+  setShowModal(false);
+  navigate(`/groups/${newGroup._id}/chat`);
+};
+  const handleDelete = async (groupId) => {
+  if (!window.confirm('Delete this room? This cannot be undone.')) return;
+  try {
+    await axios.delete(`http://localhost:3000/groups/${groupId}`, { headers });
+    socketRef.current?.emit('room:deleted', groupId);
+    setGroups(prev => prev.filter(g => g._id !== groupId));
+  } catch (err) {
+    setError(err.response?.data?.error || 'Failed to delete room.');
+  }
+};
+
+  return (
+    <div style={styles.page}>
+      <Navbar />
+      <div style={styles.container}>
+        <div style={styles.header}>
+          <h1 style={styles.title} className="mono">rooms</h1>
+          <button style={styles.newBtn} onClick={() => setShowModal(true)}>
+            + new_room()
+          </button>
+        </div>
+
+        {error && <p className="error-msg">{error}</p>}
+
+        {loading ? (
+          <p style={styles.dim} className="mono">loading...</p>
+        ) : groups.length === 0 ? (
+          <p style={styles.dim} className="mono">// no rooms yet. create one.</p>
+        ) : (
+          <div style={styles.grid}>
+            {groups.map(group => (
+              <div key={group._id} style={styles.card}>
+                <div style={styles.cardTop}>
+                  <span style={styles.groupName}>{group.group_name}</span>
+                  <span style={styles.memberCount} className="mono">
+                    {group.members.length} member{group.members.length !== 1 ? 's' : ''}
+                  </span>
+                  {group.owner_id === user._id || group.owner_id?.toString() === user._id ? (
+                    <button style={styles.deleteBtn} onClick={() => handleDelete(group._id)}>
+                      delete()
+                    </button>
+                  ) : null}
+                </div>
+                <button
+                  style={isMember(group) ? styles.openBtn : styles.joinBtn}
+                  onClick={() => handleJoinOrOpen(group)}
+                >
+                  {isMember(group) ? 'open()' : 'join()'}
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {showModal && (
+        <CreateGroupModal
+          token={token}
+          onCreated={handleGroupCreated}
+          onClose={() => setShowModal(false)}
+        />
+      )}
+    </div>
+  );
+};
+
+const styles = {
+  page: {
+    minHeight: '100vh',
+    background: 'var(--bg)',
+  },
+  container: {
+    maxWidth: '900px',
+    margin: '0 auto',
+    padding: '48px 24px',
+  },
+  header: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: '36px',
+  },
+  title: {
+    fontSize: '22px',
+    fontWeight: '600',
+    color: 'var(--text)',
+    letterSpacing: '0.05em',
+  },
+  newBtn: {
+    background: 'var(--accent)',
+    color: '#0f0f0f',
+    padding: '10px 20px',
+    fontWeight: '600',
+    fontSize: '13px',
+  },
+  grid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
+    gap: '16px',
+  },
+  card: {
+    background: 'var(--surface)',
+    border: '1px solid var(--border)',
+    borderRadius: '6px',
+    padding: '20px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '16px',
+  },
+  cardTop: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '6px',
+  },
+  groupName: {
+    fontSize: '16px',
+    fontWeight: '500',
+    color: 'var(--text)',
+  },
+  memberCount: {
+    fontSize: '12px',
+    color: 'var(--text-dim)',
+  },
+  openBtn: {
+    background: 'transparent',
+    border: '1px solid var(--accent)',
+    color: 'var(--accent)',
+    padding: '8px',
+    fontSize: '12px',
+    width: '100%',
+  },
+  joinBtn: {
+    background: 'var(--accent)',
+    color: '#0f0f0f',
+    padding: '8px',
+    fontSize: '12px',
+    fontWeight: '600',
+    width: '100%',
+  },
+  dim: {
+    color: 'var(--text-dim)',
+    fontSize: '14px',
+  },
+};
+
+export default Groups;
