@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import Navbar from '../components/Navbar';
 import Message from '../components/Message';
 import InviteBar from '../components/InviteBar';
+import RoomSettingsModal from '../components/RoomSettingsModal';
 
 const SOCKET_URL = 'http://localhost:4000';
 const API_URL    = 'http://localhost:3000';
@@ -19,6 +20,7 @@ const Chat = () => {
   const [content, setContent]     = useState('');
   const [groupName, setGroupName] = useState('');
   const [group, setGroup] = useState(null);
+  const [showSettings, setShowSettings] = useState(false);
   const [typing, setTyping]       = useState([]);
   const [error, setError]         = useState('');
 
@@ -153,6 +155,9 @@ const Chat = () => {
             ← rooms
           </button>
           <span style={styles.roomName} className="mono"># {groupName}</span>
+          {group?.owner_id === user._id || group?.owner_id?.toString() === user._id ? (
+            <button style={styles.settingsBtn} onClick={() => setShowSettings(true)}>settings()</button>
+          ) : null}
         </div>
         {group?.is_private && (group?.owner_id === user._id || group?.owner_id?.toString() === user._id) ? (
             <InviteBar groupId={groupId} token={token} socketRef={socketRef} />
@@ -199,6 +204,15 @@ const Chat = () => {
         </form>
 
       </div>
+      {showSettings && (
+        <RoomSettingsModal
+          group={group}
+          token={token}
+          socketRef={socketRef}
+          onClose={() => setShowSettings(false)}
+          onUpdated={(updatedGroup) => { setGroup(updatedGroup); setShowSettings(false); }}
+        />
+      )}
     </div>
   );
 };
@@ -286,6 +300,16 @@ const styles = {
     fontWeight: '600',
     borderRadius: '4px',
     border: 'none',
+  },
+  settingsBtn: {
+    background: 'transparent',
+    border: '1px solid var(--border)',
+    color: 'var(--text-dim)',
+    padding: '4px 10px',
+    fontSize: '12px',
+    fontFamily: 'IBM Plex Mono, monospace',
+    borderRadius: '4px',
+    marginLeft: 'auto',
   },
 };
 

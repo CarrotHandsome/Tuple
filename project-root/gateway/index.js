@@ -15,6 +15,7 @@ const io = new Server(server, {
     methods: ['GET', 'POST'],
   },
 });
+const roomPresence = {};
 
 // --- AUTH MIDDLEWARE ---
 io.use(async (socket, next) => {
@@ -66,14 +67,19 @@ io.on('connection', async (socket) => {
 
   // --- JOIN ROOM ---
   socket.on('join_room', (groupId) => {
-  socket.join(groupId);
-  console.log(`${socket.user.username} joined room ${groupId}`);
-});
+    socket.join(groupId);
+    if (!roomPresence[groupId]) roomPresence[groupId] = {};
+    roomPresence[groupId][socket.user._id.toString()] = socket.user.username;
+    io.emit('presence:update', { groupId, presence: roomPresence[groupId] });
+  });
 
   // --- LEAVE ROOM ---
   socket.on('leave_room', (groupId) => {
     socket.leave(groupId);
-    console.log(`${socket.user.username} left room ${groupId}`);
+    if (roomPresence[groupId]) {
+      delete roomPresence[groupId][socket.user._id.toString()];
+      io.emit('presence:update', { groupId, presence: roomPresence[groupId] });
+    }
   });
 
   //CREATE ROOM
@@ -83,6 +89,11 @@ io.on('connection', async (socket) => {
   //DELETE ROOM
   socket.on('room:deleted', (groupId) => {
     io.emit('room:deleted', { groupId });
+  });
+  
+  //TOGGLE PRIVACY
+  socket.on('room:updated', (group) => {
+    io.emit('room:updated', group);
   });
 
   // --- SEND MESSAGE ---
@@ -117,6 +128,8 @@ io.on('connection', async (socket) => {
         group_id:  message.group_id,
         sender_id: message.sender_id,
         username:  socket.user.username,
+        firstname: socket.user.firstname,
+        lastname: socket.user.lastname,
         content:   message.content,
         timestamp: message.timestamp,
       });
@@ -146,6 +159,16 @@ io.on('connection', async (socket) => {
   socket.on('disconnect', async () => {
     await User.findByIdAndUpdate(socket.user._id, { status: 'offline' });
     io.emit('user:status', { userId: socket.user._id, status: 'offline' });
+    Object.keys(roomPresence).forEach(groupId => {
+      if (roomPresence[groupId][socket.user._id.toString()]) {
+        delete roomPresence[groupId][socket.user._id.toString()];
+        io.emit('presence:update', { groupId, presence: roomPresence[groupId] });
+      }
+    });
+  });
+
+  socket.on('presence:get', () => {
+    socket.emit('presence:current', roomPresence);
   });
 });
 

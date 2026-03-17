@@ -14,6 +14,8 @@ const Groups = () => {
   const [loading, setLoading]     = useState(true);
   const [error, setError]         = useState('');
   const [showModal, setShowModal] = useState(false);
+  const [presence, setPresence] = useState({});
+  const [hoveringRoom, setHoveringRoom] = useState(null);
 
   const socketRef = useRef(null);
 
@@ -39,33 +41,45 @@ const Groups = () => {
   socketRef.current = socket;
 
   socket.onAny((event, ...args) => {
-  console.log('Groups socket received event:', event, args);
-});
+    console.log('Groups socket received event:', event, args);
+  });
 
-socket.on('disconnect', () => {
-  console.log('Groups socket disconnected');
-});
-
-  socket.on('connect', () => {
-    console.log('Groups socket connected:', socket.id);
+  socket.on('disconnect', () => {
+    console.log('Groups socket disconnected');
   });
 
   socket.on('room:deleted', ({ groupId }) => {
     setGroups(prev => prev.filter(g => g._id !== groupId));
   });
 
+  socket.on('room:updated', (group) => {
+    setGroups(prev => prev.map(g => g._id === group._id ? group : g));
+  });
+  
   socket.on('invite:sent', ({ groupId, username: invitedUsername }) => {
-  console.log('invite:sent received:', invitedUsername, 'current user:', user.username);
-  if (invitedUsername === user.username) {
-    fetchGroups();
-  }
-});
+    console.log('invite:sent received:', invitedUsername, 'current user:', user.username);
+    if (invitedUsername === user.username) {
+      fetchGroups();
+    }
+  });
 
   socket.on('room:created', (group) => {
     setGroups(prev => {
       if (prev.some(g => g._id === group._id)) return prev;
       return [group, ...prev];
     });
+  });
+
+  socket.on('presence:update', ({ groupId, presence: roomPresence }) => {
+    setPresence(prev => ({ ...prev, [groupId]: roomPresence }));
+  });
+
+  socket.on('connect', () => {
+    socket.emit('presence:get');
+  });
+
+  socket.on('presence:current', (currentPresence) => {
+    setPresence(currentPresence);
   });
 
   return () => socket.disconnect();
@@ -160,9 +174,22 @@ socket.on('disconnect', () => {
               <div key={group._id} style={styles.card}>
                 <div style={styles.cardTop}>
                   <span style={styles.groupName}>{group.group_name}</span>
-                  <span style={styles.memberCount} className="mono">
-                    {group.members.length} member{group.members.length !== 1 ? 's' : ''}
-                  </span>
+                  <div
+                    style={styles.memberCountWrapper}
+                    onMouseEnter={() => setHoveringRoom(group._id)}
+                    onMouseLeave={() => setHoveringRoom(null)}
+                  >
+                    <span style={styles.memberCount} className="mono">
+                      {Object.keys(presence[group._id] || {}).length} in room
+                    </span>
+                    {hoveringRoom === group._id && Object.keys(presence[group._id] || {}).length > 0 && (
+                      <div style={styles.presenceTooltip}>
+                        {Object.values(presence[group._id] || {}).map(username => (
+                          <div key={username} className="mono">{username}</div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                   {group.owner_id === user._id || group.owner_id?.toString() === user._id ? (
                     <button style={styles.deleteBtn} onClick={() => handleDelete(group._id)}>
                       delete()
@@ -329,6 +356,28 @@ const styles = {
     fontSize: '12px',
     color: 'var(--text-dim)',
     padding: '8px 0',
+  },
+  memberCountWrapper: {
+    position: 'relative',
+    cursor: 'default',
+    display: 'inline-block',
+  },
+  presenceTooltip: {
+    position: 'absolute',
+    top: '100%',
+    left: '0',
+    marginTop: '4px',
+    background: 'var(--bg)',
+    border: '1px solid var(--border)',
+    borderRadius: '4px',
+    padding: '6px 12px',
+    fontSize: '11px',
+    color: 'var(--text)',
+    whiteSpace: 'nowrap',
+    zIndex: 10,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '4px',
   },
 };
 

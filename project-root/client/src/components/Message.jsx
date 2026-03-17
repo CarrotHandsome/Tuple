@@ -8,6 +8,7 @@ const Message = ({ message, isOwn }) => {
   });
 
   const [hovering, setHovering] = useState(false);
+  console.log('message:', message.username, message.firstname, message.lastname);
 
   return (
     <div style={{ ...styles.wrapper, justifyContent: isOwn ? 'flex-end' : 'flex-start' }}>
