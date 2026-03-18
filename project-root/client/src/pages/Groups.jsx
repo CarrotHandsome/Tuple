@@ -85,8 +85,8 @@ const Groups = () => {
   return () => socket.disconnect();
 }, [token]);
 
-  const isMember = (group) =>
-    group.members.some(m => m.user_id === user._id || m.user_id?.toString() === user._id);
+  // const isMember = (group) =>
+  //   group.members.some(m => m.user_id === user._id || m.user_id?.toString() === user._id);
 
   const getInviteStatus = (group) => {
     const invite = group.invites?.find(
@@ -123,13 +123,11 @@ const Groups = () => {
   };
 
   const handleJoinOrOpen = async (group) => {
-    if (!isMember(group)) {
-      try {
-        await axios.post(`http://localhost:3000/groups/${group._id}/join`, {}, { headers });
-      } catch (err) {
-        setError(err.response?.data?.error || 'Failed to join room.');
-        return;
-      }
+    try {
+      await axios.post(`http://localhost:3000/groups/${group._id}/join`, {}, { headers });
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to join room.');
+      return;
     }
     navigate(`/groups/${group._id}/chat`);
   };
@@ -197,42 +195,41 @@ const Groups = () => {
                   ) : null}
                 </div>
                 {(() => {
-                  if (isMember(group)) {
+                  const isOwner = group.owner_id === user._id || group.owner_id?.toString() === user._id;
+                  
+                  if (!group.is_private || isOwner) {
                     return (
-                      <button style={styles.openBtn} onClick={() => handleJoinOrOpen(group)}>
+                      <button style={styles.joinBtn} onClick={() => handleJoinOrOpen(group)}>
                         open()
                       </button>
                     );
                   }
-                  if (group.is_private) {
-                    const inviteStatus = getInviteStatus(group);
-                    if (inviteStatus === 'accepted') {
-                      return (
-                        <button style={styles.joinBtn} onClick={() => handleJoinOrOpen(group)}>
-                          join()
-                        </button>
-                      );
-                    }
-                    if (inviteStatus === 'pending') {
-                      return (
-                        <div style={styles.inviteActions}>
-                          <button style={styles.acceptBtn} onClick={() => handleRespondToInvite(group, true)}>
-                            accept()
-                          </button>
-                          <button style={styles.declineBtn} onClick={() => handleRespondToInvite(group, false)}>
-                            decline()
-                          </button>
-                        </div>
-                      );
-                    }
+
+                  const inviteStatus = getInviteStatus(group);
+                  
+                  if (inviteStatus === 'accepted') {
                     return (
-                      <div style={styles.lockIndicator} className="mono">🔒 private</div>
+                      <button style={styles.joinBtn} onClick={() => handleJoinOrOpen(group)}>
+                        join()
+                      </button>
                     );
                   }
+                  
+                  if (inviteStatus === 'pending') {
+                    return (
+                      <div style={styles.inviteActions}>
+                        <button style={styles.acceptBtn} onClick={() => handleRespondToInvite(group, true)}>
+                          accept()
+                        </button>
+                        <button style={styles.declineBtn} onClick={() => handleRespondToInvite(group, false)}>
+                          decline()
+                        </button>
+                      </div>
+                    );
+                  }
+                  
                   return (
-                    <button style={styles.joinBtn} onClick={() => handleJoinOrOpen(group)}>
-                      join()
-                    </button>
+                    <div style={styles.lockIndicator} className="mono">🔒 private</div>
                   );
                 })()}
               </div>

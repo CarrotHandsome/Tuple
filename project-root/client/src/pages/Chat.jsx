@@ -28,6 +28,7 @@ const Chat = () => {
   const bottomRef    = useRef(null);
   const typingTimer  = useRef(null);
   const isTyping     = useRef(false);
+  const isLeavingRef = useRef(false);
 
   const headers = { Authorization: `Bearer ${token}` };
 
@@ -103,6 +104,11 @@ const Chat = () => {
     return () => {
       socket.emit('leave_room', groupId);
       socket.disconnect();
+      if (isLeavingRef.current) {
+        axios.delete(`http://localhost:3000/groups/${groupId}/leave`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }).catch(() => {});
+      }
     };
   }, [groupId, token]);
 
@@ -151,7 +157,7 @@ const Chat = () => {
 
         {/* Header */}
         <div style={styles.chatHeader}>
-          <button style={styles.backBtn} onClick={() => navigate('/groups')}>
+          <button style={styles.backBtn} onClick={() => { isLeavingRef.current = true; navigate('/groups'); }}>
             ← rooms
           </button>
           <span style={styles.roomName} className="mono"># {groupName}</span>

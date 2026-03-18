@@ -227,19 +227,6 @@ describe('Groups Routes', () => {
       expect(isMember).toBe(false);
     });
 
-    it('should delete the group if the owner leaves', async () => {
-      const { user: alice, token: aliceToken } = await createUserAndToken('alice', 'alice@example.com');
-      const group = await Group.create({ group_name: 'Test Group', owner_id: alice._id, members: [{ user_id: alice._id }] });
-
-      const res = await request(app)
-        .delete(`/groups/${group._id}/leave`)
-        .set('Authorization', `Bearer ${aliceToken}`);
-
-      expect(res.status).toBe(200);
-      const deleted = await Group.findById(group._id);
-      expect(deleted).toBeNull();
-    });
-
     it('should return 403 if user is not a member', async () => {
       const { user: alice } = await createUserAndToken('alice', 'alice@example.com');
       const { token: bobToken } = await createUserAndToken('bob', 'bob@example.com');

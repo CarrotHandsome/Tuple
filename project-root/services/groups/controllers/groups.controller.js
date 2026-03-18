@@ -144,10 +144,11 @@ const joinGroup = async (req, res) => {
     }
 
     if (group.is_private) {
+      const isOwner = group.owner_id.toString() === req.user._id.toString();
       const acceptedInvite = group.invites.find(
         i => i.user_id.toString() === req.user._id.toString() && i.status === 'accepted'
       );
-      if (!acceptedInvite) {
+      if (!acceptedInvite && !isOwner) {
         return res.status(403).json({ error: 'This room is private. You must be invited to join.' });
       }
       group.invites = group.invites.filter(
@@ -225,12 +226,6 @@ const leaveGroup = async (req, res) => {
     );
     if (!isMember) {
       return res.status(403).json({ error: 'You are not a member of this group.' });
-    }
-
-    // If the owner leaves, delete the group
-    if (group.owner_id.toString() === req.user._id.toString()) {
-      await Group.findByIdAndDelete(group._id);
-      return res.status(200).json({ message: 'Group deleted as owner left.' });
     }
 
     group.members = group.members.filter(
