@@ -151,9 +151,9 @@ const joinGroup = async (req, res) => {
       if (!acceptedInvite && !isOwner) {
         return res.status(403).json({ error: 'This room is private. You must be invited to join.' });
       }
-      group.invites = group.invites.filter(
-        i => i.user_id.toString() !== req.user._id.toString()
-      );
+      // group.invites = group.invites.filter(
+      //   i => i.user_id.toString() !== req.user._id.toString()
+      // );
     }
 
     group.members.push({ user_id: req.user._id });
@@ -283,8 +283,14 @@ const updateGroup = async (req, res) => {
 
     if (typeof is_private === 'boolean') {
       group.is_private = is_private;
-      if (!is_private) {
-        group.invites = [];
+      if (is_private) {
+        group.invites = group.members
+          .filter(m => m.user_id.toString() !== group.owner_id.toString())
+          .map(m => ({
+            user_id: m.user_id,
+            invited_by: group.owner_id,
+            status: 'accepted',
+          }));
       }
     }
 

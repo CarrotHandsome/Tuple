@@ -200,7 +200,7 @@ const Groups = () => {
                   if (!group.is_private || isOwner) {
                     return (
                       <button style={styles.joinBtn} onClick={() => handleJoinOrOpen(group)}>
-                        open()
+                        join()
                       </button>
                     );
                   }

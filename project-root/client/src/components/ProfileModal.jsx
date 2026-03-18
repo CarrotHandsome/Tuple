@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import axios from 'axios';
+import { useAuth } from '../context/AuthContext';
 
 const ProfileModal = ({ token, user, onClose }) => {
   const [form, setForm] = useState({
@@ -9,6 +10,7 @@ const ProfileModal = ({ token, user, onClose }) => {
   const [error, setError]     = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
+  const { login } = useAuth();
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -34,6 +36,7 @@ const ProfileModal = ({ token, user, onClose }) => {
         headers: { Authorization: `Bearer ${token}` },
       });
 
+      login({ ...user, ...payload }, token);
       setSuccess('Profile updated successfully.');
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to update profile.');
