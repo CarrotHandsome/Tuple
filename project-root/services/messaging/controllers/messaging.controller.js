@@ -28,6 +28,10 @@ const sendMessage = async (req, res) => {
       return res.status(403).json({ error: 'You are not a member of this group.' });
     }
 
+    if (!content || content.trim() === '') {
+      return res.status(400).json({ error: 'Message must have content.' });
+    }
+
     const message = await Message.create({
       group_id,
       sender_id: req.user._id,

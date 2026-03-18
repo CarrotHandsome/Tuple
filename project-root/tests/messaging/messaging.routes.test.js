@@ -85,7 +85,7 @@ describe('Messaging Routes', () => {
       expect(updated.last_message_at.getTime()).toBeGreaterThan(originalTime.getTime());
     });
 
-    it('should return 400 if content is empty and no attachments', async () => {
+    it('should return 400 if content is empty', async () => {
       const { user, token } = await createUserAndToken('alice', 'alice@example.com');
       const group = await createGroup(user._id);
 
